@@ -7,6 +7,7 @@ require 'minitest/autorun'
 
 require 'stringio'
 
+# Just like an StringIO, but writes into separate io
 class FakeIO < StringIO
   attr_writer :in
 
@@ -20,6 +21,7 @@ class FakeIO < StringIO
   end
 end
 
+# Class designed to simply collect messages
 class FakeTransport
   attr_reader :msgs
 

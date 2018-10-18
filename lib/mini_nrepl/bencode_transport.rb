@@ -4,17 +4,23 @@ require 'bencode'
 require 'mini_nrepl/logging'
 
 module MiniNrepl
-  # Interaction with clojure's repl
+  # Encodes/Decodes messages to/from BEncode and handles IO
   class BencodeTransport
     Error = Class.new(StandardError)
 
     include Logging
 
+    # @param io [IO] A Suclass of IO. Can be a TCPSocket for example
     def initialize(io)
       @io = io
       @parser = BEncode::Parser.new(io)
     end
 
+    # Sends encoded message through IO and collects all responses until end of messages
+    #
+    # @param cmd [Hash] Message hash to be converted into clojure's map
+    # @return [Enumerator]
+    # @yield [msg] Yields decoded messages if block was provided
     def send(cmd, &block)
       cmd = cmd.to_h
       logger.debug(self.class) { "CMD: #{cmd}" }
@@ -29,6 +35,7 @@ module MiniNrepl
 
     private
 
+    # Attempts to read responses until done/error/unknown-op
     def collect_responses
       return to_enum(:collect_responses) unless block_given?
 
