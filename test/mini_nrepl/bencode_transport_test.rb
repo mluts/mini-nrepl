@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'test_helper'
-require 'mini-nrepl/bencode_transport'
+require 'mini_nrepl/bencode_transport'
 
 module MiniNrepl
   class BencodeTransportTest < Minitest::Test

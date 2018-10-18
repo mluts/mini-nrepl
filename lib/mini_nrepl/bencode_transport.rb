@@ -1,11 +1,13 @@
 # frozen_string_literal: true
 
 require 'bencode'
-require 'mini-nrepl/logging'
+require 'mini_nrepl/logging'
 
 module MiniNrepl
   # Interaction with clojure's repl
   class BencodeTransport
+    Error = Class.new(StandardError)
+
     include Logging
 
     def initialize(io)
@@ -31,7 +33,7 @@ module MiniNrepl
       return to_enum(:collect_responses) unless block_given?
 
       loop do
-        raise 'EOF' if @parser.eos?
+        raise Error, 'EOF' if @parser.eos?
 
         response = @parser.parse!
         logger.debug(self.class) { "Response #{response.inspect}" }
