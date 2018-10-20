@@ -41,7 +41,8 @@ module MiniNrepl
 
       # @return [Hash] Args documentation
       def args
-        @args ||= desc.fetch('optional').merge(desc.fetch('requires')).transform_keys(&:to_sym)
+        @args = [desc.fetch('optional', {}), desc.fetch('requires')]
+                .reduce(:merge).transform_keys(&:to_sym)
       end
 
       private

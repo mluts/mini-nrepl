@@ -4,10 +4,21 @@ require 'optparse'
 require 'mini_nrepl/logging'
 require 'mini_nrepl'
 require 'mini_nrepl/nrepl/console_handler'
+require 'mini_nrepl/util/code_formatter'
 
 module MiniNrepl
   # Command-Line interface
   class CLI
+    class Console
+      def initialize(io)
+        @io = io
+      end
+
+      def puts(*args)
+        @io.puts(*args)
+      end
+    end
+
     def self.run!(argv)
       new(argv).run!
     end
@@ -19,8 +30,9 @@ module MiniNrepl
       @opts = {}
       @log_levels = [Logger::WARN, Logger::INFO, Logger::DEBUG]
       @log_level = 0
+      @console = Console.new($stdout)
       parse_options!
-      @console_handler = Nrepl::ConsoleHandler.new($stdout)
+      @console_handler = Nrepl::ConsoleHandler.new(@console)
       @console_handler_proc = @console_handler.to_proc
     end
 
@@ -45,8 +57,12 @@ module MiniNrepl
           opts[:eval] = code
         end
 
-        opt.on('-s NREPL_SESSION_FILE', 'Preserve session in file') do |path|
-          opts[:nrepl_session_file] = path
+        opt.on('-F FILE_OR_CODE', 'Code to format. Can be "-" to read from stdin') do |f|
+          opts[:code_to_format] = f
+        end
+
+        opt.on('-C', 'Pry console inside Nrepl instalce') do
+          opts[:pry] = true
         end
       end
       @parser.parse!(argv)
@@ -72,13 +88,28 @@ module MiniNrepl
         end || die!('Specify nrepl addr or use .nrepl-port for connection')
     end
 
-    def run!
-      opts.each do |opt, val|
-        case opt
-        when :eval
-          code = val.to_s
-          repl.op('eval', code: code, &@console_handler_proc).to_a.inspect
+    def format_code(file)
+      code =
+        if file == '-'
+          ARGF.read
+        elsif File.exist?(file)
+          IO.read(file)
+        else
+          file
         end
+
+      Util::CodeFormatter.new(repl).format_code(code)
+    end
+
+    def run!
+      if (code = opts[:code])
+        repl.op('eval', code: code, &@console_handler_proc).to_a
+      elsif (f = opts[:code_to_format])
+        res = format_code(f)
+        $stdout.puts(res) if res
+      elsif opts[:pry]
+        require 'pry'
+        repl.pry
       end
     end
   end

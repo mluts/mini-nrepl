@@ -9,6 +9,14 @@ require 'mini_nrepl/logging'
 # Base module for gem
 module MiniNrepl
   Error = Class.new(StandardError)
+
+  # Exception which signals that nrepl op is not available
+  class OpNotAvailable < Error
+    def initialize(name)
+      super("Op #{name.inspect} not available")
+    end
+  end
+
   extend Logging
 
   class << self

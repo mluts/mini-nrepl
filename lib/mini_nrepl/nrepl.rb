@@ -39,7 +39,7 @@ module MiniNrepl
     # Performs given op
     # @param name [String]
     # @param args [Hash]
-    def op(name, args, &block)
+    def op(name, args = {}, &block)
       logger.debug(self.class) { "op #{name.inspect} #{args.inspect}" }
 
       check_op_available!(name)
