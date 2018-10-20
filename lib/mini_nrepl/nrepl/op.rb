@@ -47,7 +47,7 @@ module MiniNrepl
       private
 
       def allowed_keys
-        @allowed_keys ||= Set.new(args.keys)
+        @allowed_keys ||= Set.new(args.keys + [:session])
       end
 
       def check_args!(args)

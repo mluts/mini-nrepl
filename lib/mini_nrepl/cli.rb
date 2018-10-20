@@ -44,14 +44,20 @@ module MiniNrepl
         opt.on('-e CODE', 'Eval code') do |code|
           opts[:eval] = code
         end
+
+        opt.on('-s NREPL_SESSION_FILE', 'Preserve session in file') do |path|
+          opts[:nrepl_session_file] = path
+        end
       end
       @parser.parse!(argv)
 
       Logging.logger.level = @log_levels.fetch(@log_level)
     end
 
+    # Exit from program with message and help message
     def die!(msg)
-      abort([msg, '', @parser].compact.join("\n"))
+      msg = "#{msg}\n" if msg
+      abort([msg, @parser].compact.join("\n"))
     end
 
     def repl
