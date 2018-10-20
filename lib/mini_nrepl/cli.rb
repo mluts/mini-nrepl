@@ -9,6 +9,7 @@ require 'mini_nrepl/util/code_formatter'
 module MiniNrepl
   # Command-Line interface
   class CLI
+    # Wrapper over stdout/stderr
     class Console
       def initialize(io)
         @io = io
@@ -61,8 +62,12 @@ module MiniNrepl
           opts[:code_to_format] = f
         end
 
-        opt.on('-C', 'Pry console inside Nrepl instalce') do
+        opt.on('-C', 'Pry console inside Nrepl instance') do
           opts[:pry] = true
+        end
+
+        opt.on('-l CLJ_FILE', 'Load file in nrepl') do |f|
+          opts[:nrepl_load_file] = f
         end
       end
       @parser.parse!(argv)
@@ -110,6 +115,12 @@ module MiniNrepl
       elsif opts[:pry]
         require 'pry'
         repl.pry
+      elsif (f = opts[:nrepl_load_file])
+        repl.op('load-file', 'file-path': f,
+                             'file-name': File.basename(f),
+                             'file': IO.read(f), &@console_handler_proc)
+      else
+        puts @parser.to_s
       end
     end
   end
