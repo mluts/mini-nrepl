@@ -2,6 +2,7 @@
 
 $LOAD_PATH.unshift File.expand_path('../lib', __dir__)
 require 'mini_nrepl'
+require 'mini_nrepl/util/eval'
 
 require 'minitest/autorun'
 
@@ -33,3 +34,13 @@ class FakeTransport
     msgs << msg
   end
 end
+
+module FakeUuidGenerator
+  module_function
+
+  def uuid
+    '1234-1234-1234-1234'
+  end
+end
+
+MiniNrepl::Util::Eval.uuid_generator = FakeUuidGenerator

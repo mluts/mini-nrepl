@@ -5,6 +5,8 @@ require 'mini_nrepl/logging'
 require 'mini_nrepl'
 require 'mini_nrepl/nrepl/console_handler'
 require 'mini_nrepl/util/code_formatter'
+require 'mini_nrepl/util/eval'
+require 'mini_nrepl/clj'
 
 module MiniNrepl
   # Command-Line interface
@@ -18,6 +20,10 @@ module MiniNrepl
       def puts(*args)
         @io.puts(*args)
       end
+
+      def abort(msg)
+        abort(msg.to_s)
+      end
     end
 
     def self.run!(argv)
@@ -26,15 +32,16 @@ module MiniNrepl
 
     attr_reader :argv, :opts
 
-    def initialize(argv)
+    def initialize(argv, console: Console.new($stdout), repl: nil)
       @argv = argv.dup
       @opts = {}
       @log_levels = [Logger::WARN, Logger::INFO, Logger::DEBUG]
       @log_level = 0
-      @console = Console.new($stdout)
+      @console = console
       parse_options!
       @console_handler = Nrepl::ConsoleHandler.new(@console)
       @console_handler_proc = @console_handler.to_proc
+      @repl = repl # For testing purposes
     end
 
     def parse_options! # rubocop:disable MethodLength, AbcSize
@@ -66,7 +73,7 @@ module MiniNrepl
           opts[:pry] = true
         end
 
-        opt.on('-l CLJ_FILE', 'Load file in nrepl') do |f|
+        opt.on('-l CLJ_FILE', 'Eval file') do |f|
           opts[:nrepl_load_file] = f
         end
       end
@@ -78,7 +85,7 @@ module MiniNrepl
     # Exit from program with message and help message
     def die!(msg)
       msg = "#{msg}\n" if msg
-      abort([msg, @parser].compact.join("\n"))
+      @console.abort([msg, @parser].compact.join("\n"))
     end
 
     def repl
@@ -107,8 +114,9 @@ module MiniNrepl
     end
 
     def run!
-      if (code = opts[:code])
-        repl.op('eval', code: code, &@console_handler_proc).to_a
+      if (code = opts[:eval])
+        repl.clone_session
+        MiniNrepl::Util::Eval.new(repl).eval!(code, &@console_handler_proc)
       elsif (f = opts[:code_to_format])
         res = format_code(f)
         $stdout.puts(res) if res
@@ -116,9 +124,8 @@ module MiniNrepl
         require 'pry'
         repl.pry
       elsif (f = opts[:nrepl_load_file])
-        repl.op('load-file', 'file-path': f,
-                             'file-name': File.basename(f),
-                             'file': IO.read(f), &@console_handler_proc)
+        repl.clone_session
+        MiniNrepl::Util::Eval.new(repl).eval!(IO.read(f), &@console_handler_proc)
       else
         puts @parser.to_s
       end

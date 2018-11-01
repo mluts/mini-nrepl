@@ -34,6 +34,8 @@ Gem::Specification.new do |spec| # rubocop:disable BlockLength
   spec.require_paths = ['lib']
 
   spec.add_dependency 'bencode', '~> 0.8.2'
+  spec.add_dependency 'edn', '~> 1.1'
+  spec.add_dependency 'neovim', '~> 0.7'
 
   spec.add_development_dependency 'bundler', '~> 1.16'
   spec.add_development_dependency 'guard', '~> 2.14.2'
