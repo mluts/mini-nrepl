@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require 'mini_nrepl/clj'
-require 'edn'
 
 module MiniNrepl
   # Clojure fn's atop Clj

@@ -21,7 +21,7 @@ module MiniNrepl
 
       def eval(code, args: {}, &block)
         id = self.class.uuid_generator.uuid
-        fold_results(@nrepl.op('eval', args.merge(code: code, id: id), &block))
+        fold_results(@nrepl.op('eval', args.merge(code: code, id: id)), &block)
       rescue Interrupt
         @nrepl.op('interrupt', 'interrupt-id': id).to_a
         { 'interrupted' => true }
@@ -50,6 +50,8 @@ module MiniNrepl
 
       def fold_results(results)
         results.each_with_object({}) do |res, acc|
+          yield(res) if block_given?
+
           if (out = res['out'])
             (acc[:out] ||= []) << out
           elsif res['ex']

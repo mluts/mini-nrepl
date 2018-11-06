@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
-require 'edn'
+MiniNrepl.silence_warnings do
+  require 'edn'
+end
 
 module MiniNrepl
   # Clojure DSL

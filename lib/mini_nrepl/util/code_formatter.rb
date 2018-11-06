@@ -14,8 +14,6 @@ module MiniNrepl
         op_name = 'format-code'
         res_key = 'formatted-code'
 
-        raise MiniNrepl::OpNotAvailable, op_name unless @nrepl.ops.key?(op_name)
-
         @nrepl.op(op_name, code: code).detect { |r| r[res_key] }&.fetch(res_key)
       end
     end

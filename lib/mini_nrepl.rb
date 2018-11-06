@@ -43,5 +43,13 @@ module MiniNrepl
 
       connect_tcp_bencode!('localhost', IO.read('.nrepl-port'))
     end
+
+    def silence_warnings
+      verbose = $VERBOSE
+      $VERBOSE = nil
+      yield
+    ensure
+      $VERBOSE = verbose
+    end
   end
 end

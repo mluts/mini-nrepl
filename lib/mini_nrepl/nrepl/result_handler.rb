@@ -48,6 +48,8 @@ module MiniNrepl
             block.call(msg) if !handle_val_set || (msg_val_set & handle_val_set).any?
           end
         end
+
+        msg
       end
 
       def with_opts(opts)

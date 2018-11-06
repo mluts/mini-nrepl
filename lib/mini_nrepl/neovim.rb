@@ -2,6 +2,8 @@
 
 require 'neovim'
 require 'mini_nrepl/nrepl/result_handler'
+require 'mini_nrepl/neovim_util'
+require 'mini_nrepl/util/code_formatter'
 
 module MiniNrepl
   # Neovim plugin interface
@@ -54,12 +56,12 @@ module MiniNrepl
       end
     end
 
-    attr_reader :nrepl
+    attr_accessor :nrepl
 
     # @param nrepl [MiniNrepl::Nrepl] Nrepl to operate on in nvim
-    def initialize(nrepl)
-      @nrepl = nrepl
+    def initialize
       @result_handler = NvimresultHandler.new
+      @nrepl = nil
     end
 
     # Initialize neovim plugin
@@ -97,7 +99,24 @@ module MiniNrepl
       nrepl_eval(nvim, code)
     end
 
-    def nrepl_current_ns(nvim)
+    def nrepl_format_code(nvim, lnum, lcount, _char)
+      mode = nvim.call_function('mode', [])
+      line = nvim.call_function('getline', [lnum])
+
+      return -1 if /[iR]/.match(mode) || line =~ /^\s+;/
+
+      code = nvim.call_function('getline', [lnum, lnum + lcount - 1]).join("\n")
+
+      formatted_code = MiniNrepl::Util::CodeFormatter.new(nrepl).format_code(code)
+
+      if formatted_code
+        out = formatted_code.each_line.to_a.map(&:rstrip).join("\n")
+        nvim.set_var('_nrepl_formatted_code', out)
+        nvim.command(NeovimUtil.replace_with_variable_cmd(lnum, lcount, 'g:_nrepl_formatted_code'))
+        0
+      else
+        -1
+      end
     end
   end
 end

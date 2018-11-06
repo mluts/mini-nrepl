@@ -12,6 +12,7 @@ module MiniNrepl
 
       code = '(+ 1 2)'
 
+      repl.expect(:clone_session, nil, [])
       repl.expect(:op, [], ['eval', { code: code, id: FakeUuidGenerator.uuid }])
 
       CLI.new(['-e', code], console: console, repl: repl).run!
@@ -26,6 +27,7 @@ module MiniNrepl
       file.write(code)
       file.close
 
+      repl.expect(:clone_session, nil, [])
       repl.expect(:op, [], ['eval', { code: code,
                                       id: FakeUuidGenerator.uuid }])
 
