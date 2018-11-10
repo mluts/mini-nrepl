@@ -16,6 +16,15 @@ module MiniNrepl
             end
           end
       end
+
+      def redirect_to_file!(path)
+        level = @logger&.level
+        file = File.open(path, 'a')
+        file.sync = true
+        @logger = ::Logger.new(file) do |l|
+          l.level = level if level
+        end
+      end
     end
 
     def logger

@@ -10,6 +10,8 @@ module MiniNrepl
 
     include Logging
 
+    attr_accessor :eof
+
     # @param io [IO] A Suclass of IO. Can be a TCPSocket for example
     def initialize(io)
       @io = io
@@ -47,6 +49,9 @@ module MiniNrepl
         yield response
         break if end_of_responses?(response)
       end
+    rescue Errno::EPIPE => ex
+      logger.warn(self.class) { ex.inspect }
+      nil
     end
 
     # @see https://github.com/clojure/tools.nrepl#handlers

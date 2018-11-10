@@ -14,18 +14,24 @@ end
 
 module MiniNrepl
   class NeovimPluginTest < Minitest::Test
-    attr_reader :repl, :plugin, :nvim
+    attr_reader :nrepl, :plugin, :nvim, :host, :plug, :nrepl_connector
 
     def setup
-      @repl = FakeNrepl.new
-      @plugin = NeovimPlugin.new
+      @nrepl_connector = Minitest::Mock.new
+      @host = Minitest::Mock.new
+      @plug = Minitest::Mock.new
+      @nrepl = FakeNrepl.new
+      @plugin = NeovimPlugin.new(neovim_host: host, nrepl_connector: nrepl_connector)
       @nvim = Minitest::Mock.new
-      @plugin.nrepl = @repl
+      @plugin.nrepl = @nrepl
     end
 
     def teardown
       nvim.verify
-      repl.verify
+      nrepl.verify
+      plug.verify
+      host.verify
+      nrepl_connector.verify
     end
 
     def out_res(out)
@@ -41,11 +47,11 @@ module MiniNrepl
 
       response = out_res('123') + val_res('foo.bar', nil) + val_res('foo.bar', '3')
 
-      repl.expect_op('eval', { code: code }, response)
+      nrepl.expect_op('eval', { code: code, id: FakeUuidGenerator.uuid }, response)
 
       nvim.expect(:out_write, nil, ["123\n"])
-      nvim.expect(:out_write, nil, ["foo.bar=>\n"])
-      nvim.expect(:out_write, nil, ["foo.bar=>3\n"])
+      nvim.expect(:out_write, nil, ["foo.bar=> \n"])
+      nvim.expect(:out_write, nil, ["foo.bar=> 3\n"])
 
       plugin.nrepl_eval(nvim, code)
     end
@@ -68,11 +74,58 @@ module MiniNrepl
         [NeovimUtil.replace_with_variable_cmd(lnum, lcount, 'g:_nrepl_formatted_code')]
       )
 
-      repl.expect_op('format-code', { code: code }, [{ 'formatted-code' => code2 }])
+      nrepl.expect_op('format-code', { code: code }, [{ 'formatted-code' => code2 }])
 
       res = plugin.nrepl_format_code(nvim, lnum, lcount, char)
 
       assert_equal 0, res
+    end
+
+    def test_init
+      plug.expect(:command, nil, [:NreplEval, { nargs: 1 }])
+      plug.expect(:command, nil, [:NreplEvalPrompt, { nargs: 0 }])
+      plug.expect(:function, nil, [:NreplCurrentNS, { nargs: 0, sync: true }])
+      plug.expect(:autocmd, nil, [:FileType, { pattern: 'clojure' }])
+      plug.expect(:function, nil, [:NreplFormatCode, { sync: true }])
+      plug.expect(:command, nil, [:NreplConnect, { nargs: '?' }])
+      plug.expect(:command, nil, [:NreplReloadNS, { nargs: 1 }])
+      plug.expect(:command, nil, [:NreplReloadCurrentNS, { nargs: 0 }])
+
+      host.expect(:plugin, nil) do |&block|
+        block.call(plug)
+        true
+      end
+
+      plugin.init!
+    end
+
+    def test_current_ns
+      path = 'foo/bar.clj'
+      ns = 'foo.bar'
+      code = MiniNrepl::CljLib.read_ns(path)
+
+      nvim.expect(:call_function, path, ['expand', %w[%]])
+      nrepl.expect(:op, [{ 'value' => ns }], ['eval', { code: code, id: FakeUuidGenerator.uuid }])
+
+      assert_equal ns, plugin.nrepl_current_ns(nvim)
+    end
+
+    def test_nrepl_connect
+      nrepl = Object.new
+      nrepl_connector.expect(:try_connect_using_nrepl_port, nrepl, [])
+      plugin.nrepl_connect(nvim)
+      assert_equal nrepl, plugin.nrepl
+    end
+
+    def test_nrepl_reload_ns
+      ns = 'foo.bar'
+      code = MiniNrepl::Clj.reload_ns(ns)
+      nrepl.expect(
+        :op,
+        [{ 'value' => 'nil' }],
+        ['eval', { code: code, id: FakeUuidGenerator.uuid }]
+      )
+      plugin.nrepl_reload_ns(nvim, ns)
     end
   end
 end

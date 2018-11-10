@@ -22,7 +22,7 @@ module MiniNrepl
       end
 
       def abort(msg)
-        abort(msg.to_s)
+        Kernel.abort(msg.to_s)
       end
     end
 
