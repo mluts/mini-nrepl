@@ -145,7 +145,14 @@ module MiniNrepl
     def nrepl_current_ns(nvim)
       logger.debug(self.class) { "called #{__method__}" }
       path = NeovimUtil.current_path(nvim)
-      res = nrepl_eval(nvim, CljLib.read_ns(path), silent: true)
+      clj_code =
+        if File.readable?(path)
+          CljLib.read_ns(path)
+        else
+          code = nvim.call_function('getline', [1, '$']).join("\n")
+          CljLib.read_ns_from_code(code)
+        end
+      res = nrepl_eval(nvim, clj_code, silent: true)
       res.fetch(:values, []).first
     end
 

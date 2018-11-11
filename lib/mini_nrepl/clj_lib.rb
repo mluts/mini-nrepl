@@ -34,5 +34,30 @@ module MiniNrepl
         )
       )
     end
+
+    def read_ns_from_code(code)
+      do_(
+        require_ns('clojure.tools.namespace.parse'),
+        let(
+          {
+            'read-ns' => fn(['code'],
+                            thread_last(
+                              '(java.io.StringReader. code)',
+                              '(clojure.java.io/reader)',
+                              '(java.io.PushbackReader.)',
+                              '(clojure.tools.namespace.parse/read-ns-decl)'
+                            )),
+
+            'extract-ns-name' => fn(['ns-form'],
+                                    '(when ns-form (nth ns-form 1))')
+          },
+          thread_last(
+            to_clj(code),
+            '(read-ns)',
+            '(extract-ns-name)'
+          )
+        )
+      )
+    end
   end
 end

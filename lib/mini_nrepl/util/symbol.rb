@@ -51,7 +51,7 @@ module MiniNrepl
 
       def get_file(res)
         file = res.fetch('file')
-        line = res.fetch('line')
+        line = res.fetch('line', 1)
 
         logger.debug(self.class) { [file, line].join(':') }
 
