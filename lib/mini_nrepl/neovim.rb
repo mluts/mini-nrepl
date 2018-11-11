@@ -106,16 +106,40 @@ module MiniNrepl
         plug.command(:NreplReloadCurrentNS, nargs: 0, &method(:nrepl_reload_current_ns))
 
         plug.command(:NreplJumpToSymbol, sync: true, nargs: '+', &method(:nrepl_jump_to_symbol))
+
         plug.command(:NreplJumpToCurrentSymbol, sync: true, nargs: 0, &method(:nrepl_jump_to_current_symbol))
+
+        plug.command(:NreplSymbolDoc, sync: true, nargs: '+', &method(:nrepl_symbol_doc))
+
+        plug.command(:NreplCurrentSymbolDoc, sync: true, nargs: 0, &method(:nrepl_current_symbol_doc))
 
         plug.autocmd(:FileType, pattern: 'clojure') do |nvim|
           cedit = nvim.get_option('cedit')
 
           nvim.command("nmap <Leader>ce :NreplEvalPrompt<CR>#{cedit}")
-          nvim.command('nmap <nowait> <Leader>r :NreplReloadCurrentNS<CR>')
-          nvim.command('nmap <C-[> :NreplJumpToCurrentSymbol<CR>')
+          nvim.command('nmap <buffer> <nowait> <Leader>r :NreplReloadCurrentNS<CR>')
+          nvim.command('nmap <buffer> [<C-d> :NreplJumpToCurrentSymbol<CR>')
+          nvim.command('nmap <buffer> ]<C-d> :NreplJumpToCurrentSymbol<CR>')
+          nvim.command('nmap <buffer> [d :NreplCurrentSymbolDoc<CR>')
+          nvim.command('nmap <buffer> ]d :NreplCurrentSymbolDoc<CR>')
         end
       end
+    end
+
+    def nrepl_current_symbol_doc(nvim)
+      word = nvim.call_function('expand', ['<cword>'])
+      ns = nrepl_current_ns(nvim)
+      nrepl_symbol_doc(nvim, ns, word)
+    end
+
+    def nrepl_symbol_doc(nvim, ns, symbol)
+      doc = MiniNrepl::Util::Symbol.new(nrepl(nvim), ns, symbol).doc
+      return unless doc
+
+      logger.debug(self.class) { "docstring: #{doc.inspect}" }
+
+      nvim.out_write""
+      nvim.out_write("#{doc.strip}\n")
     end
 
     def nrepl_jump_to_current_symbol(nvim)
@@ -149,6 +173,7 @@ module MiniNrepl
         if File.readable?(path)
           CljLib.read_ns(path)
         else
+          logger.debug(self.class) { "#{path} unreadable" }
           code = nvim.call_function('getline', [1, '$']).join("\n")
           CljLib.read_ns_from_code(code)
         end

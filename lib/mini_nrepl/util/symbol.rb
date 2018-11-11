@@ -15,6 +15,12 @@ module MiniNrepl
         get_info
       end
 
+      def doc
+        return unless @info.any?
+
+        @info.fetch(:docstring) #.each_line.map(&:strip).join("\n")
+      end
+
       def nvim_file
         return unless @info.any?
 
@@ -44,9 +50,24 @@ module MiniNrepl
 
         unless res['status'].include?('no-info')
           @info.merge!(
-            file: get_file(res)
+            file: get_file(res),
+            docstring: get_docstring(res)
           )
         end
+      end
+
+      def get_docstring(res)
+        ns = res.fetch('ns')
+        name = res.fetch('name')
+        args = res.fetch('arglists-str')
+        doc = res.fetch('doc', '')
+
+        [
+          "#{ns}/#{name}",
+          args,
+          ' ',
+          doc.each_line.map(&:strip)
+        ].join("\n")
       end
 
       def get_file(res)
