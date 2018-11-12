@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'mini_nrepl/logging'
 
 module MiniNrepl
@@ -18,7 +20,7 @@ module MiniNrepl
       def doc
         return unless @info.any?
 
-        @info.fetch(:docstring) #.each_line.map(&:strip).join("\n")
+        @info.fetch(:docstring)
       end
 
       def nvim_file
@@ -58,16 +60,16 @@ module MiniNrepl
 
       def get_docstring(res)
         ns = res.fetch('ns')
-        name = res.fetch('name')
-        args = res.fetch('arglists-str')
+        name = res.fetch('name', nil)
+        args = res.fetch('arglists-str', nil)
         doc = res.fetch('doc', '')
 
         [
-          "#{ns}/#{name}",
+          name ? "#{ns}/#{name}" : ns,
           args,
           ' ',
           doc.each_line.map(&:strip)
-        ].join("\n")
+        ].compact.join("\n")
       end
 
       def get_file(res)

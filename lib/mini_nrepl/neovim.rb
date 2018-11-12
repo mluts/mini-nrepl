@@ -113,6 +113,12 @@ module MiniNrepl
 
         plug.command(:NreplCurrentSymbolDoc, sync: true, nargs: 0, &method(:nrepl_current_symbol_doc))
 
+        plug.command(:NreplTestNS, nargs: 1, &method(:nrepl_test_ns))
+
+        plug.command(:NreplTestThisNS, nargs: 0, &method(:nrepl_test_this_ns))
+
+        plug.command(:NreplTestThisFn, nargs: 0, &method(:nrepl_test_this_fn))
+
         plug.autocmd(:FileType, pattern: 'clojure') do |nvim|
           cedit = nvim.get_option('cedit')
 
@@ -122,8 +128,55 @@ module MiniNrepl
           nvim.command('nmap <buffer> ]<C-d> :NreplJumpToCurrentSymbol<CR>')
           nvim.command('nmap <buffer> [d :NreplCurrentSymbolDoc<CR>')
           nvim.command('nmap <buffer> ]d :NreplCurrentSymbolDoc<CR>')
+          nvim.command('nmap <buffer> [t :NreplTestThisNS<CR>')
+          nvim.command('nmap <buffer> [T :NreplTestThisFn<CR>')
         end
       end
+    end
+
+    def current_fn(nvim)
+      line_no = NeovimUtil.cur_line(nvim)
+      content = NeovimUtil.read_current_buffer(nvim)
+
+      content.each_line.first(line_no).reverse.lazy.map do |line|
+        if (m = /^\s*\(def\S+\s+(?<fn>\S+)/.match(line))
+          m['fn']
+        end
+      end.reject(&:nil?).first
+    end
+
+    def nrepl_test_this_fn(nvim)
+      fn = current_fn(nvim)
+      return unless fn
+
+      ns = nrepl_current_ns(nvim)
+
+      res = nrepl_eval(
+        nvim,
+        Clj.do_(
+          Clj.reload_ns(ns),
+          Clj.test_vars("#{ns}/#{fn}")
+        ),
+        silent: true
+      )
+      show_in_quickfix(nvim, res)
+    end
+
+    def show_in_quickfix(nvim, res)
+      out = res.values_at(:out, :values).compact.flatten.join("\n")
+      NeovimUtil.quickfix_replace(nvim, out)
+    end
+
+    def nrepl_test_this_ns(nvim)
+      logger.debug(self.class) { 'nrepl_test_this_ns' }
+      ns = nrepl_current_ns(nvim)
+      logger.debug(self.class) { "ns: #{ns.inspect}" }
+      nrepl_test_ns(nvim, ns)
+    end
+
+    def nrepl_test_ns(nvim, ns)
+      res = nrepl_eval(nvim, Clj.run_tests(ns), silent: true)
+      show_in_quickfix(nvim, res)
     end
 
     def nrepl_current_symbol_doc(nvim)
@@ -138,7 +191,6 @@ module MiniNrepl
 
       logger.debug(self.class) { "docstring: #{doc.inspect}" }
 
-      nvim.out_write""
       nvim.out_write("#{doc.strip}\n")
     end
 
@@ -174,7 +226,7 @@ module MiniNrepl
           CljLib.read_ns(path)
         else
           logger.debug(self.class) { "#{path} unreadable" }
-          code = nvim.call_function('getline', [1, '$']).join("\n")
+          code = NeovimUtil.read_current_buffer(nvim)
           CljLib.read_ns_from_code(code)
         end
       res = nrepl_eval(nvim, clj_code, silent: true)
@@ -237,7 +289,7 @@ module MiniNrepl
 
     private
 
-    def error!(msg, nvim = nil)
+    def error!(nvim, msg)
       if nvim
         nvim.err_write("#{msg}\n")
       else
