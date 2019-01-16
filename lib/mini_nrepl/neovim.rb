@@ -41,7 +41,7 @@ module MiniNrepl
       #
       # @param msg [String] Echo 'msg' to neovim
       def out_writeln(msg)
-        nvim.command("echom '#{msg}'")
+        nvim.out_writeln(msg)
       end
 
       def err_writeln(msg)
@@ -116,18 +116,20 @@ module MiniNrepl
         plug.command(:NreplTestNS, nargs: 1, &method(:nrepl_test_ns))
 
         plug.command(:NreplTestThisNS, nargs: 0, &method(:nrepl_test_this_ns))
+        plug.command(:SNreplTestThisNS, sync: true, nargs: 0, &method(:nrepl_test_this_ns))
 
         plug.command(:NreplTestThisFn, nargs: 0, &method(:nrepl_test_this_fn))
+        plug.command(:SNreplTestThisFn, sync: true, nargs: 0, &method(:nrepl_test_this_fn))
 
         plug.autocmd(:FileType, pattern: 'clojure') do |nvim|
-          cedit = nvim.get_option('cedit')
-
-          nvim.command("nmap <Leader>ce :NreplEvalPrompt<CR>#{cedit}")
+          nvim.command('nmap <buffer> <Leader>ce :NreplEvalPrompt<CR>')
           nvim.command('nmap <buffer> <nowait> <Leader>r :NreplReloadCurrentNS<CR>')
           nvim.command('nmap <buffer> [<C-d> :NreplJumpToCurrentSymbol<CR>')
           nvim.command('nmap <buffer> ]<C-d> :NreplJumpToCurrentSymbol<CR>')
           nvim.command('nmap <buffer> [d :NreplCurrentSymbolDoc<CR>')
           nvim.command('nmap <buffer> ]d :NreplCurrentSymbolDoc<CR>')
+          nvim.command('nmap <buffer> <C-w>[ :split +NreplJumpToCurrentSymbol<CR>')
+          nvim.command('nmap <buffer> <C-w><C-[> :split +NreplJumpToCurrentSymbol<CR>')
           nvim.command('nmap <buffer> [t :NreplTestThisNS<CR>')
           nvim.command('nmap <buffer> [T :NreplTestThisFn<CR>')
         end
@@ -220,7 +222,9 @@ module MiniNrepl
 
     def nrepl_current_ns(nvim)
       logger.debug(self.class) { "called #{__method__}" }
+
       path = NeovimUtil.current_path(nvim)
+
       clj_code =
         if File.readable?(path)
           CljLib.read_ns(path)
@@ -249,10 +253,11 @@ module MiniNrepl
 
     # @param nvim [Neovim::Client] Current neovim client
     def nrepl_eval_prompt(nvim)
+      ns = nrepl_current_ns(nvim)
       logger.debug(self.class) { 'nrepl_eval_prompt' }
-      code = nvim.call_function('input', ['=> '])
+      code = nvim.call_function('input', ["#{ns}=> "])
       logger.debug(self.class) { "nrepl_eval_prompt code #{code.inspect}" }
-      nrepl_eval(nvim, code)
+      nrepl_eval(nvim, Clj.in_ns(ns, code))
     end
 
     def nrepl_format_code(nvim, lnum, lcount, _char)

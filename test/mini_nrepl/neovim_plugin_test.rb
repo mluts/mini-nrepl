@@ -2,6 +2,7 @@
 
 require 'test_helper'
 require 'mini_nrepl/neovim'
+require 'tempfile'
 
 class FakeNrepl < Minitest::Mock
   def expect_op(name, args, ret)
@@ -49,9 +50,9 @@ module MiniNrepl
 
       nrepl.expect_op('eval', { code: code, id: FakeUuidGenerator.uuid }, response)
 
-      nvim.expect(:out_write, nil, ["123\n"])
-      nvim.expect(:out_write, nil, ["foo.bar=> \n"])
-      nvim.expect(:out_write, nil, ["foo.bar=> 3\n"])
+      nvim.expect(:out_writeln, nil, ['123'])
+      nvim.expect(:out_writeln, nil, ['foo.bar=> '])
+      nvim.expect(:out_writeln, nil, ['foo.bar=> 3'])
 
       plugin.nrepl_eval(nvim, code)
     end
@@ -90,6 +91,15 @@ module MiniNrepl
       plug.expect(:command, nil, [:NreplConnect, { nargs: '?' }])
       plug.expect(:command, nil, [:NreplReloadNS, { nargs: 1 }])
       plug.expect(:command, nil, [:NreplReloadCurrentNS, { nargs: 0 }])
+      plug.expect(:command, nil, [:NreplJumpToSymbol, { sync: true, nargs: '+' }])
+      plug.expect(:command, nil, [:NreplJumpToCurrentSymbol, { sync: true, nargs: 0 }])
+      plug.expect(:command, nil, [:NreplSymbolDoc, { sync: true, nargs: '+' }])
+      plug.expect(:command, nil, [:NreplCurrentSymbolDoc, { sync: true, nargs: 0 }])
+      plug.expect(:command, nil, [:NreplTestNS, { nargs: 1 }])
+      plug.expect(:command, nil, [:NreplTestThisNS, { nargs: 0 }])
+      plug.expect(:command, nil, [:SNreplTestThisNS, { sync: true, nargs: 0 }])
+      plug.expect(:command, nil, [:NreplTestThisFn, { nargs: 0 }])
+      plug.expect(:command, nil, [:SNreplTestThisFn, { sync: true, nargs: 0 }])
 
       host.expect(:plugin, nil) do |&block|
         block.call(plug)
@@ -100,7 +110,8 @@ module MiniNrepl
     end
 
     def test_current_ns
-      path = 'foo/bar.clj'
+      file = Tempfile.new(['mini_nrepl', '.clj'])
+      path = file.path
       ns = 'foo.bar'
       code = MiniNrepl::CljLib.read_ns(path)
 
@@ -108,6 +119,8 @@ module MiniNrepl
       nrepl.expect(:op, [{ 'value' => ns }], ['eval', { code: code, id: FakeUuidGenerator.uuid }])
 
       assert_equal ns, plugin.nrepl_current_ns(nvim)
+    ensure
+      file&.delete
     end
 
     def test_nrepl_connect
@@ -125,6 +138,7 @@ module MiniNrepl
         [{ 'value' => 'nil' }],
         ['eval', { code: code, id: FakeUuidGenerator.uuid }]
       )
+      nvim.expect(:out_writeln, nil, ['=> nil'])
       plugin.nrepl_reload_ns(nvim, ns)
     end
   end

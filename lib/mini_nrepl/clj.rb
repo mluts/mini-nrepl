@@ -38,10 +38,11 @@ module MiniNrepl
       "(->> #{forms.join(' ')})"
     end
 
-    def in_ns(ns)
+    def in_ns(ns, *forms)
       do_(
         reload_ns(ns),
-        "(in-ns #{symbol(ns)})"
+        "(in-ns #{symbol(ns)})",
+        *forms
       )
     end
 

@@ -24,7 +24,7 @@ module MiniNrepl
       end
 
       def nvim_file
-        return unless @info.any?
+        return unless @info[:file]
 
         file = @info.fetch(:file)
 
@@ -59,13 +59,14 @@ module MiniNrepl
       end
 
       def get_docstring(res)
-        ns = res.fetch('ns')
+        ns = res.fetch('ns', nil)
         name = res.fetch('name', nil)
         args = res.fetch('arglists-str', nil)
         doc = res.fetch('doc', '')
+        full_name = [ns, name].compact.join("/")
 
         [
-          name ? "#{ns}/#{name}" : ns,
+          full_name,
           args,
           ' ',
           doc.each_line.map(&:strip)
@@ -73,7 +74,9 @@ module MiniNrepl
       end
 
       def get_file(res)
-        file = res.fetch('file')
+        return unless res.key?('file')
+
+        file = res.fetch('file', nil)
         line = res.fetch('line', 1)
 
         logger.debug(self.class) { [file, line].join(':') }
