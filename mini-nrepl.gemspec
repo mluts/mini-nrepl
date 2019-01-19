@@ -10,8 +10,8 @@ Gem::Specification.new do |spec| # rubocop:disable BlockLength
   spec.authors       = ['Michael Lutsiuk']
   spec.email         = ['michael.lutsiuk@gmail.com']
 
-  spec.summary       = 'mini-nrepl gives you access to clojure\'s repl'
-  spec.description   = 'mini-nrepl gives you access to clojure\'s repl'
+  spec.summary       = 'Clojure nrepl access'
+  spec.description   = 'mini-nrepl gives you CLI/neovim access to clojure\'s repl'
   spec.homepage      = 'https://github.com/mluts/mini-nrepl'
   spec.license       = 'MIT'
 
@@ -37,8 +37,8 @@ Gem::Specification.new do |spec| # rubocop:disable BlockLength
   spec.add_dependency 'edn', '~> 1.1'
   spec.add_dependency 'neovim', '~> 0.7'
 
-  spec.add_development_dependency 'guard', '~> 2.14.2'
-  spec.add_development_dependency 'guard-minitest', '~> 2.4.6'
+  spec.add_development_dependency 'guard', '~> 2.14'
+  spec.add_development_dependency 'guard-minitest', '~> 2.4'
   spec.add_development_dependency 'minitest', '~> 5.0'
   spec.add_development_dependency 'pry', '~> 0.11.3'
   spec.add_development_dependency 'rake', '~> 10.0'
