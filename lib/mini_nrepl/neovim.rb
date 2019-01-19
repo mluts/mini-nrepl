@@ -41,7 +41,7 @@ module MiniNrepl
       #
       # @param msg [String] Echo 'msg' to neovim
       def out_writeln(msg)
-        nvim.out_writeln(msg)
+        nvim.out_write("#{msg}\n")
       end
 
       def err_writeln(msg)

@@ -17,12 +17,32 @@ module MiniNrepl
     attr_reader :tt, :ops
     attr_accessor :session
 
+    # Default session-id storage
+    # We have to preserve same session-id, so let's store it in current directory
+    module SessionStorage
+      module_function
+
+      FNAME = '.mini-nrepl'
+
+      def write!(session_id)
+        Logging.logger.debug(self) { "Storing session-id #{session_id}" }
+        IO.write(FNAME, session_id.to_s.strip)
+      end
+
+      def read
+        Logging.logger.debug(self) { 'Reading session-id' }
+        IO.read(FNAME) if File.exist?(FNAME) && !File.empty?(FNAME)
+      end
+    end
+
     # @param transport [#send(Hash)] Transport
-    def initialize(transport)
+    def initialize(transport, store_session: true, session_storage: SessionStorage)
       logger.debug(self.class) { "Initializing with #{transport.inspect}" }
       @tt = transport
       @ops = {}
+      @session_storage = session_storage
       inject_ops!
+      set_session! if store_session
     end
 
     # Bootstraps available ops
@@ -60,10 +80,32 @@ module MiniNrepl
     # @param session [String] session-id
     def clone_session(session = nil)
       msg = op('clone', session: session).first
-      self.session = msg.fetch('new-session')
+      msg.fetch('new-session').tap do |sid|
+        self.session = sid
+      end
+    end
+
+    def set_session!
+      logger.debug(self.class) { 'Setting session-id' }
+      sid = @session_storage.read
+
+      if !sid.nil? && known_sessions.include?(sid)
+        logger.debug(self.class) { "Setting known session-id #{sid.inspect}" }
+        self.session = sid
+      else
+        logger.debug(self.class) { 'Cloning session' }
+        sid = clone_session
+        @session_storage.write!(sid)
+      end
     end
 
     private
+
+    def known_sessions
+      op('ls-sessions').reduce(:merge).fetch('sessions', []).tap do |sessions|
+        logger.debug(self.class) { "Known sessions: #{sessions.inspect}" }
+      end
+    end
 
     def check_op_available!(name)
       return if @ops.key?(name)

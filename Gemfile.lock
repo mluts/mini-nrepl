@@ -58,7 +58,6 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  bundler (~> 1.16)
   guard (~> 2.14.2)
   guard-minitest (~> 2.4.6)
   mini-nrepl!
@@ -67,4 +66,4 @@ DEPENDENCIES
   rake (~> 10.0)
 
 BUNDLED WITH
-   1.16.2
+   2.0.1

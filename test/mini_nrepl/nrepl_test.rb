@@ -19,7 +19,8 @@ module MiniNrepl
       {
         'ops' => [
           op_hash('describe', {}),
-          op_hash('eval', {}, 'code' => 'code to eval')
+          op_hash('eval', {}, 'code' => 'code to eval'),
+          op_hash('clone', {'session' => 'session-id'})
         ].reduce({}, :merge)
       }
     end
@@ -28,8 +29,8 @@ module MiniNrepl
       t = Minitest::Mock.new
       t.expect(:send, [sample_ops], [{ op: 'describe', 'verbose?': 'true' }])
       t.expect(:send, [{ 'out' => '123' }], [{ op: 'eval', code: '(+ 120 3)' }])
-      r = Nrepl.new(t)
-      assert_equal %w[describe eval].sort, r.ops.keys.sort
+      r = Nrepl.new(t, store_session: false)
+      assert_equal %w[describe eval clone].sort, r.ops.keys.sort
 
       r.op('eval', code: '(+ 120 3)')
       t.verify

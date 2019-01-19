@@ -14,16 +14,22 @@ module MiniNrepl
         @ns = ns
         @symbol = symbol
         @info = {}
-        get_info
       end
 
       def doc
+        get_info
         return unless @info.any?
 
         @info.fetch(:docstring)
+      rescue => ex
+        logger.error(self.class) do
+          ['in doc method', "@info: #{@info.inspect}", ex.inspect].join("\n")
+        end
+        raise
       end
 
       def nvim_file
+        get_info
         return unless @info[:file]
 
         file = @info.fetch(:file)
@@ -62,7 +68,9 @@ module MiniNrepl
         ns = res.fetch('ns', nil)
         name = res.fetch('name', nil)
         args = res.fetch('arglists-str', nil)
-        doc = res.fetch('doc', '')
+        doc = Array(res.fetch('doc', '')).join("\n") 
+        # Workaround fo\ :doc key
+        # It returns empty vector ([]) for protocols
         full_name = [ns, name].compact.join("/")
 
         [

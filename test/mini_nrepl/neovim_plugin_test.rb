@@ -50,9 +50,9 @@ module MiniNrepl
 
       nrepl.expect_op('eval', { code: code, id: FakeUuidGenerator.uuid }, response)
 
-      nvim.expect(:out_writeln, nil, ['123'])
-      nvim.expect(:out_writeln, nil, ['foo.bar=> '])
-      nvim.expect(:out_writeln, nil, ['foo.bar=> 3'])
+      nvim.expect(:out_write, nil, ["123\n"])
+      nvim.expect(:out_write, nil, ["foo.bar=> \n"])
+      nvim.expect(:out_write, nil, ["foo.bar=> 3\n"])
 
       plugin.nrepl_eval(nvim, code)
     end
@@ -138,7 +138,7 @@ module MiniNrepl
         [{ 'value' => 'nil' }],
         ['eval', { code: code, id: FakeUuidGenerator.uuid }]
       )
-      nvim.expect(:out_writeln, nil, ['=> nil'])
+      nvim.expect(:out_write, nil, ["=> nil\n"])
       plugin.nrepl_reload_ns(nvim, ns)
     end
   end
